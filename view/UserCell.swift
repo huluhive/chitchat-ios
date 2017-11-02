@@ -17,8 +17,11 @@ class UserCell: UITableViewCell {
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "hh:mm:ss a"
             self.timeLabel.text = dateFormatter.string(from: timeStampDate as Date)
-            self.detailTextLabel?.text = self.message?.text
-
+            if let text = self.message?.text {
+            self.detailTextLabel?.text = text
+            }else if self.message?.imageUrl != nil {
+                self.detailTextLabel?.text = "Image message"
+            }
         }
     }
 
@@ -43,7 +46,6 @@ class UserCell: UITableViewCell {
     
     let profileImageView : UIImageView = {
         let image = UIImageView()
-        image.image=UIImage(named: "pp_dummy")
         image.translatesAutoresizingMaskIntoConstraints=false
         image.layer.cornerRadius=24
         image.layer.masksToBounds=true

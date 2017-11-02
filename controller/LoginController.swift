@@ -80,7 +80,10 @@ class LoginController: UIViewController {
     
     lazy var profileImageView : UIImageView = {
         let profileIV = UIImageView()
-        profileIV.image = UIImage(named: "pp_dummy")
+        let origImage = UIImage(named: "icons8-customer")
+        let tintedImage = origImage?.withRenderingMode(.alwaysTemplate)
+        profileIV.tintColor = UIColor.white
+        profileIV.image = tintedImage
         profileIV.contentMode = .scaleAspectFill
         profileIV.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(selectProfileImage)))
         profileIV.translatesAutoresizingMaskIntoConstraints=false

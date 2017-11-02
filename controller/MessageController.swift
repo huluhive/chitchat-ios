@@ -101,7 +101,6 @@ class MessageController: UITableViewController {
         Database.database().reference().child("users").child(uid!)
             .observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: AnyObject] {
-                    self.navigationItem.title = dictionary["name"] as? String
                     
                     let titleView =  UIButton(type: .system)
                     titleView.frame = CGRect(x: 0, y: 0, width: 100, height: 40)

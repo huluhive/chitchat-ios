@@ -8,6 +8,8 @@
 
 import UIKit
 import Firebase
+import MobileCoreServices
+import AVFoundation
 
 class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICollectionViewDelegateFlowLayout, UIImagePickerControllerDelegate, UINavigationControllerDelegate{
     var inputContainerBottomAnchor : NSLayoutConstraint?
@@ -29,7 +31,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
     
     let imageGetButton : UIButton = {
        let imageButton = UIButton()
-        let image = UIImage(named: "icons8-gallery")
+        let image = UIImage(named: "gallery")
         imageButton.setImage(image, for: .normal)
         imageButton.translatesAutoresizingMaskIntoConstraints=false
         imageButton.addTarget(self, action: #selector(handleUploadImage), for: .touchUpInside)
@@ -65,7 +67,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
         containerView.backgroundColor=UIColor.white
         
         containerView.addSubview(self.imageGetButton)
-        imageGetButton.leftAnchor.constraint(equalTo: containerView.leftAnchor).isActive=true
+        imageGetButton.leftAnchor.constraint(equalTo: containerView.leftAnchor, constant: 4).isActive=true
         imageGetButton.centerYAnchor.constraint(equalTo: containerView.centerYAnchor).isActive=true
         imageGetButton.widthAnchor.constraint(equalToConstant: 44).isActive=true
         imageGetButton.heightAnchor.constraint(equalToConstant: 44).isActive=true
@@ -146,9 +148,9 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
     }
     
     @objc func handleUploadImage() {
-        print("Tapped the button ")
         let photoPickerController = UIImagePickerController ()
         photoPickerController.delegate = self
+        photoPickerController.mediaTypes = [kUTTypeImage as String , kUTTypeVideo as String]
         present(photoPickerController, animated: true, completion: nil  )
     }
     
@@ -323,6 +325,52 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
                     self.handleSendWithImageUrl(imageUrl: imageUrl, image: image)
                 }
             })
+        }
+    }
+    
+    var startingFrame : CGRect?
+    var blackBackgroundView : UIView?
+    var startingImageView : UIImageView?
+    
+    func handleImageTappedForZoom(imageView : UIImageView) {
+        startingImageView = imageView
+        startingImageView?.isHidden=true
+        startingFrame = imageView.superview?.convert(imageView.frame, to: nil)
+        let zoomingImageView = UIImageView(frame: startingFrame!)
+        zoomingImageView.image=imageView.image
+        zoomingImageView.isUserInteractionEnabled=true
+        zoomingImageView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleZoomOut)))
+        
+        if let window = UIApplication.shared.keyWindow {
+            let height = startingFrame!.height/startingFrame!.width*window.frame.width
+             blackBackgroundView = UIView(frame: window.frame)
+            blackBackgroundView?.backgroundColor = UIColor.black
+            blackBackgroundView?.alpha = 0
+            window.addSubview(blackBackgroundView!)
+            window.addSubview(zoomingImageView)
+        
+            self.inputContainerView.alpha=0
+            UIView.animate(withDuration: 0.5, delay: 0, options: .curveEaseOut, animations: {
+                self.blackBackgroundView?.alpha=1
+                zoomingImageView.frame = CGRect(x: 0, y: 0, width: window.frame.width, height: height)
+                zoomingImageView.center=window.center
+            }, completion: nil)
+
+        }
+            }
+    
+    @objc func handleZoomOut(gesture : UITapGestureRecognizer){
+        if let zoomOutImage=gesture.view{
+            zoomOutImage.layer.cornerRadius=16
+            zoomOutImage.clipsToBounds=true
+        UIView.animate(withDuration: 0.5, delay: 0, options: .curveEaseOut, animations: {
+            zoomOutImage.frame=self.startingFrame!
+            self.blackBackgroundView?.alpha=0
+            self.inputContainerView.alpha=1
+        }, completion: {(completed: Bool) in
+            zoomOutImage.removeFromSuperview()
+            self.startingImageView?.isHidden=false
+        })
         }
     }
 }

@@ -93,6 +93,9 @@ class MessageViewCell: UICollectionViewCell {
     
     @objc func handleImageMessageTap(gesture: UITapGestureRecognizer){
         print("Image Tapped")
+        if let imageView = gesture.view as? UIImageView {
+            chatLogController?.handleImageTappedForZoom(imageView:imageView)
+    }
     }
     
 }
