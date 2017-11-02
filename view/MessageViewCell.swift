@@ -33,6 +33,15 @@ class MessageViewCell: UICollectionViewCell {
         return image
     }()
     
+    let messageImageView : UIImageView = {
+        let image = UIImageView()
+        image.translatesAutoresizingMaskIntoConstraints = false
+        image.layer.cornerRadius = 16
+        image.contentMode = .scaleAspectFill
+        image.layer.masksToBounds = true
+        return image
+    }()
+    
     let bubbleView : UIView = {
         let view = UIView()
         view.backgroundColor = UIColor(r: 0, g: 137, b: 249)
@@ -45,6 +54,12 @@ class MessageViewCell: UICollectionViewCell {
         addSubview(bubbleView)
         addSubview(textView)
         addSubview(profileImageView)
+        bubbleView.addSubview(messageImageView)
+        
+        messageImageView.leftAnchor.constraint(equalTo: bubbleView.leftAnchor).isActive=true
+        messageImageView.topAnchor.constraint(equalTo: bubbleView.topAnchor).isActive=true
+        messageImageView.widthAnchor.constraint(equalTo: bubbleView.widthAnchor).isActive=true
+        messageImageView.heightAnchor.constraint(equalTo: bubbleView.heightAnchor).isActive=true
         
         profileImageView.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 8).isActive=true
         profileImageView.bottomAnchor.constraint(equalTo: self.bottomAnchor).isActive=true
