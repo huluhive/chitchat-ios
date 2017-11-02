@@ -99,7 +99,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
         collectionView?.register(MessageViewCell.self, forCellWithReuseIdentifier: cellId)
         collectionView?.keyboardDismissMode = .interactive
     
-//        setUpKeyboardObservers()
+        setUpKeyboardObservers()
     }
     
     override var inputAccessoryView: UIView? {
@@ -115,8 +115,17 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
     }
     
     func setUpKeyboardObservers(){
-        NotificationCenter.default.addObserver(self, selector: #selector(handleKeyboardWillShow), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
-         NotificationCenter.default.addObserver(self, selector: #selector(handleKeyboardWillHide), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleKeyboardDidShow), name: .UIKeyboardDidShow, object: nil)
+        
+//        NotificationCenter.default.addObserver(self, selector: #selector(handleKeyboardWillShow), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+//         NotificationCenter.default.addObserver(self, selector: #selector(handleKeyboardWillHide), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+    }
+    
+    @objc func handleKeyboardDidShow() {
+        if(messages.count>0){
+        let indexPath = NSIndexPath(item: self.messages.count-1, section: 0)
+        self.collectionView?.scrollToItem(at: indexPath as IndexPath, at: .top, animated: true)
+    }
     }
     
     @objc func handleKeyboardWillShow(notification :NSNotification){
@@ -149,27 +158,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
     }
     
     
-    @objc func handleSendMessage() {
-        let ref=Database.database().reference().child("messages")
-        let childRef=ref.childByAutoId()
-        let toId=user!.id!
-        let fromId=Auth.auth().currentUser!.uid
-        let timeStamp = NSDate().timeIntervalSince1970
-        let values = ["text":textField.text! , "toId" : toId,"fromId" : fromId,"timeStamp" : timeStamp] as [String : Any]
-        childRef.updateChildValues(values) { (error, ref) in
-            if(error != nil) {
-                print(error!)
-                return
-        }
-            let messageId = childRef.key
-            let userMessageReference = Database.database().reference().child("user-messages").child(fromId).child(toId)
-            userMessageReference.updateChildValues([messageId:1])
-            let reciepentMessageReference = Database.database().reference().child("user-messages").child(toId).child(fromId)
-            reciepentMessageReference.updateChildValues([messageId:1])
-        self.textField.text=""
-    }
-    }
-    
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         handleSendMessage()
         return true
@@ -187,15 +175,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
                 guard let dictionary = snapshot.value as? [String : AnyObject] else {
                     return
                 }
-                let message = Message()
-                message.fromId = dictionary["fromId"] as? String
-                message.toId = dictionary["toId"] as? String
-                message.text = dictionary["text"] as? String
-                message.timeStamp = dictionary["timeStamp"] as? NSNumber
-                message.imageUrl = dictionary["imageUrl"] as? String
-                self.messages.append(message)
+                self.messages.append(Message(dictionary: dictionary))
                 DispatchQueue.main.async {
                     self.collectionView?.reloadData()
+                    let indexPath = NSIndexPath(item: self.messages.count-1, section: 0)
+                    self.collectionView?.scrollToItem(at: indexPath as IndexPath, at: .bottom, animated: true)
                 }
             })
         }
@@ -209,7 +193,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
     
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return messages.count
-        
     }
     
      private func setupCellType(message: Message,cell: MessageViewCell) {
@@ -243,19 +226,28 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellId, for: indexPath) as! MessageViewCell
+        cell.chatLogController = self
         let message = messages[indexPath.row]
         cell.textView.text = message.text
         setupCellType(message: message, cell: cell)
         if let text = message.text {
             cell.bubbleWidthAnchor?.constant = estimateFrameForText(text: text).width + 32
+            cell.textView.isHidden=false
+            
+        } else if message.imageUrl != nil{
+            cell.textView.isHidden=true
+            cell.bubbleWidthAnchor?.constant = 200
         }
         return cell
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         var height : CGFloat = 80
-        if let text = messages[indexPath.row].text {
+        let message = messages[indexPath.row]
+        if let text = message.text {
         height = estimateFrameForText(text: text).height + 30
+        } else if let imageHeight = message.imageHeight?.floatValue , let imageWidth = message.imageWidth?.floatValue {
+            height = CGFloat(imageHeight/imageWidth*200)
         }
         return CGSize(width: UIScreen.main.bounds.width, height: height)
     }
@@ -281,31 +273,29 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
         dismiss(animated: true, completion: nil)
     }
     
-    func uploadImageToFirebase(image:UIImage)  {
-        
-        let imageName = NSUUID().uuidString
-        let storageReference  = Storage.storage().reference().child("message-images").child("\(imageName).jpg")
-        if let uploadData = UIImageJPEGRepresentation(image, 0.2) {
-            storageReference.putData(uploadData, metadata: nil, completion: { (metadata, error) in
-                if(error != nil){
-                    print(error ?? "error")
-                    return
-                }
-                if let imageUrl = metadata?.downloadURL()?.absoluteString {
-                    self.handleSendWithImageUrl(imageUrl: imageUrl)
-                }
-            })
-        }
-        
+    @objc func handleSendMessage() {
+        let properties : [String : Any ] = ["text" : textField.text!]
+        sendMessageWithProperties(properties: properties)
     }
     
-    func handleSendWithImageUrl(imageUrl:String){
+    func handleSendWithImageUrl(imageUrl:String, image: UIImage){
+        let properties : [String : Any] = ["imageUrl":imageUrl , "imageHeight" : image.size.height,
+                                                "imageWidth": image.size.width ]
+        sendMessageWithProperties(properties: properties)
+    }
+    
+    func sendMessageWithProperties(properties : [String : Any])  {
         let ref=Database.database().reference().child("messages")
         let childRef=ref.childByAutoId()
         let toId=user!.id!
         let fromId=Auth.auth().currentUser!.uid
         let timeStamp = NSDate().timeIntervalSince1970
-        let values = ["imageUrl":imageUrl , "toId" : toId,"fromId" : fromId,"timeStamp" : timeStamp] as [String : Any]
+        
+        var values : [String : Any] = ["toId" : toId,
+        "fromId" : fromId,"timeStamp" : timeStamp]
+        
+        properties.forEach({values[$0] = $1})
+        
         childRef.updateChildValues(values) { (error, ref) in
             if(error != nil) {
                 print(error!)
@@ -319,5 +309,20 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate , UICol
             self.textField.text=""
         }
     }
-
+    
+    func uploadImageToFirebase(image:UIImage)  {
+        let imageName = NSUUID().uuidString
+        let storageReference  = Storage.storage().reference().child("message-images").child("\(imageName).jpg")
+        if let uploadData = UIImageJPEGRepresentation(image, 0.2) {
+            storageReference.putData(uploadData, metadata: nil, completion: { (metadata, error) in
+                if(error != nil){
+                    print(error ?? "error")
+                    return
+                }
+                if let imageUrl = metadata?.downloadURL()?.absoluteString {
+                    self.handleSendWithImageUrl(imageUrl: imageUrl, image: image)
+                }
+            })
+        }
+    }
 }

@@ -12,6 +12,7 @@ class MessageViewCell: UICollectionViewCell {
     var bubbleWidthAnchor : NSLayoutConstraint?
     var bubbleRightAnchor :NSLayoutConstraint?
     var bubbleLeftAnchor :NSLayoutConstraint?
+    var chatLogController : ChatLogController?
     
     let textView : UILabel = {
         let tv = UILabel()
@@ -33,12 +34,14 @@ class MessageViewCell: UICollectionViewCell {
         return image
     }()
     
-    let messageImageView : UIImageView = {
+    lazy var messageImageView : UIImageView = {
         let image = UIImageView()
         image.translatesAutoresizingMaskIntoConstraints = false
         image.layer.cornerRadius = 16
         image.contentMode = .scaleAspectFill
         image.layer.masksToBounds = true
+        image.isUserInteractionEnabled = true
+        image.addGestureRecognizer(UITapGestureRecognizer(target: self, action:#selector(handleImageMessageTap)))
         return image
     }()
     
@@ -86,6 +89,10 @@ class MessageViewCell: UICollectionViewCell {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc func handleImageMessageTap(gesture: UITapGestureRecognizer){
+        print("Image Tapped")
     }
     
 }

@@ -44,15 +44,9 @@ class MessageController: UITableViewController {
                 let messageRef = Database.database().reference().child("messages").child(messageId)
                 messageRef.observe(.value, with: { (snapshot) in
                     if let dictionary = snapshot.value as? [String : AnyObject] {
-                        let message = Message()
-                        message.fromId = dictionary["fromId"] as? String
-                        message.toId = dictionary["toId"] as? String
-                        message.text = dictionary["text"] as? String
-                        message.timeStamp = dictionary["timeStamp"] as? NSNumber
-                        
+                        let message = Message(dictionary: dictionary)
                         if let chatPartnerId = message.chatPartnerId() {
                             self.messageDictionary[chatPartnerId] = message
-                            
                         }
                         self.attempReloadTable()
                     }
@@ -79,7 +73,6 @@ class MessageController: UITableViewController {
     self.tableView.reloadData()
     }
     }
-    
     
     @objc func handleNewMessage(){
         let newMessageController = NewMessageController()
