@@ -10,7 +10,7 @@ import UIKit
 import Firebase
 
 extension LoginController : UIImagePickerControllerDelegate , UINavigationControllerDelegate {
-    
+
     //triggers when profile image is clicked
     @objc func selectProfileImage(){
         let picker = UIImagePickerController()
@@ -21,6 +21,13 @@ extension LoginController : UIImagePickerControllerDelegate , UINavigationContro
     
     //handles login or register according to the segmented controller
     @objc func handleLoginAndRegister(){
+        indicator = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.gray)
+        indicator?.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
+        indicator?.center = view.center
+        view.addSubview(indicator!)
+        indicator?.bringSubview(toFront: view)
+        UIApplication.shared.isNetworkActivityIndicatorVisible = true
+        indicator?.startAnimating()
         if(segmentedController.selectedSegmentIndex == 0){
             handleLogin()
         } else {
@@ -30,16 +37,20 @@ extension LoginController : UIImagePickerControllerDelegate , UINavigationContro
     
     // handles when user presses the login button
     func handleLogin() {
+        
         guard let email = emailTextField.text , let password = passwordTextField.text
             else {
+                self.indicator?.stopAnimating()
                 print("Form content is not valid")
                 return
         }
         Auth.auth().signIn(withEmail: email, password: password) { (user, error) in
             if(error != nil){
                 print ("Error signing in")
+                self.indicator?.stopAnimating()
                 return
             }
+            self.indicator?.stopAnimating()
             self.dismiss(animated: true, completion: nil)
             self.messageController!.checkIfUserLoggedIn()
         }
@@ -60,6 +71,7 @@ extension LoginController : UIImagePickerControllerDelegate , UINavigationContro
             
             if(error != nil){
                 print ("Error creating user")
+                self.indicator?.stopAnimating()
                 return
             }
             
@@ -74,6 +86,7 @@ extension LoginController : UIImagePickerControllerDelegate , UINavigationContro
                 storageReference.putData(uploadData, metadata: nil, completion: { (metadata, error) in
                     if(error != nil){
                         print(error ?? "error")
+                        self.indicator?.stopAnimating()
                         return
                     }
                     
@@ -96,8 +109,10 @@ extension LoginController : UIImagePickerControllerDelegate , UINavigationContro
             
             if(error != nil){
                 print("Error")
+                self.indicator?.stopAnimating()
                 return
             }
+            self.indicator?.stopAnimating()
             print("User created")
             self.dismiss(animated: true, completion: nil)
             self.messageController?.checkIfUserLoggedIn()

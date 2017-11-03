@@ -10,7 +10,7 @@ import UIKit
 import Firebase
 
 class LoginController: UIViewController {
-
+    var indicator : UIActivityIndicatorView?
     var messageController : MessageController?
     
     let inputContainersView : UIView = {
